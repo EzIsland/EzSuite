@@ -1,0 +1,2 @@
+SRC_DIR := $(GET_CURRENT_DIR)
+
