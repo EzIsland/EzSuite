@@ -383,8 +383,11 @@ compile-commands:
 	@$(call cat,$(COMPILE_COMMANDS),compile_commands.json)
 
 dep-graph:
-	@make -Bnd | make2graph -b | dot -Tpng -o dep-graph.png
+	@make -Bnd | grep -Ev Makefile | make2graph -b | dot -Tpng -o dep-graph.png
 
 doc:
-	@$(MAKE_DIR) $(BASE_BUILD_DIR)/doc
+	@$(MAKE_DIR) $(BUILD_BASE_DIR)/doc
 	doxygen $(ROOT_DIR)/Doxyfile
+
+
+
