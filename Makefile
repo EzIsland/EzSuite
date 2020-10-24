@@ -273,7 +273,8 @@ endif
 # Flags common to all build types
 CXX_COMMON_FLAGS = -std=c++20 -fmodules -fno-implicit-module-maps -fno-implicit-modules \
  -fno-autolink -fno-exceptions  -Wall -Wextra -Wpedantic -Werror -Wconversion \
- -pthread -fretain-comments-from-system-headers -stdlib=libc++ -Wno-unused-command-line-argument
+ -pthread -fretain-comments-from-system-headers -stdlib=libc++ -Wno-unused-command-line-argument \
+ -Wno-error=unused-variable
 
 # Flags for the build type currently selected
 CXX_FLAGS := $(CXX_COMMON_FLAGS) $(CXX_BUILD_TYPE_FLAGS)

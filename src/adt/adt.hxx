@@ -5,6 +5,7 @@
 export module ezs.adt;
 
 export import ezs.adt.Ptr;
+export import ezs.adt.Ptr.fwd;
 export import ezs.adt.Value;
 
 ///

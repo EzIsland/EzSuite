@@ -24,8 +24,9 @@ export namespace ezs::adt {
 /// \tparam Pointee The pointed to type which Ptr aliases. Note that Pointee
 /// refers to the underlying type which would be retrieved by dereferencing Ptr.
 /// Pointee must satisfy the concept ezs::adt::Value.
+/// The template parameter may be an incomplete type.
 ///
-template <Value Pointee> class Ptr {
+template <Value Pointee> class Ptr final {
 public:
   ///
   /// \brief Deleted default constructor.
@@ -96,7 +97,7 @@ public:
   ///
   /// This overload is chosen when the Ptr object is itself const.
   ///
-  constexpr const Pointee *operator->() const noexcept;
+  [[nodiscard]] constexpr const Pointee *operator->() const noexcept;
 
   ///
   /// \brief This overloaded member access operator provides non-const access to
@@ -104,7 +105,7 @@ public:
   ///
   /// This overload is only chosen when the Ptr object is not const.
   ///
-  constexpr Pointee *operator->() noexcept;
+  [[nodiscard]] constexpr Pointee *operator->() noexcept;
 
   ///
   /// \brief This overloaded dereference operator provides const only access to
@@ -112,7 +113,7 @@ public:
   ///
   /// The overload is chosen only when the Ptr object is const.
   ///
-  constexpr const Pointee &operator*() const noexcept;
+  [[nodiscard]] constexpr const Pointee &operator*() const noexcept;
 
   ///
   /// \brief This overloaded dereference operator provides non-const access to
@@ -120,7 +121,7 @@ public:
   ///
   /// The overload is chosen when the Ptr object is non-const.
   ///
-  constexpr Pointee &operator*() noexcept;
+  [[nodiscard]] constexpr Pointee &operator*() noexcept;
 
 private:
   ///
@@ -130,21 +131,21 @@ private:
 };
 
 template <Value Pointee>
-constexpr const Pointee *Ptr<Pointee>::operator->() const noexcept {
+[[nodiscard]] constexpr const Pointee *Ptr<Pointee>::operator->() const noexcept {
   return mPtr;
 }
 
 template <Value Pointee>
-constexpr Pointee *Ptr<Pointee>::operator->() noexcept {
+[[nodiscard]] constexpr Pointee *Ptr<Pointee>::operator->() noexcept {
   return mPtr;
 }
 
 template <Value Pointee>
-constexpr const Pointee &Ptr<Pointee>::operator*() const noexcept {
+[[nodiscard]] constexpr const Pointee &Ptr<Pointee>::operator*() const noexcept {
   return *mPtr;
 }
 
-template <Value Pointee> constexpr Pointee &Ptr<Pointee>::operator*() noexcept {
+template <Value Pointee> [[nodiscard]] constexpr Pointee &Ptr<Pointee>::operator*() noexcept {
   return *mPtr;
 }
 
@@ -155,7 +156,7 @@ template <Value Pointee>
 constexpr Ptr<Pointee>::Ptr(Ptr<Pointee> &&pOther) noexcept : mPtr(pOther.mPtr) {}
 
 template <Value Pointee>
-    constexpr Ptr<Pointee> &Ptr<Pointee>::operator=(Ptr<Pointee> &&pOther) &
+constexpr Ptr<Pointee> &Ptr<Pointee>::operator=(Ptr<Pointee> &&pOther) &
     noexcept {
   mPtr = pOther.mPtr;
   return *this;

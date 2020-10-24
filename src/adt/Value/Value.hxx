@@ -12,5 +12,5 @@ export module ezs.adt.Value;
 /// \brief Concept representing non cv-qualified non-reference types.
 ///
 export template <typename T>
-concept Value =
-    !std::is_const_v<T> && !std::is_volatile_v<T> && !std::is_reference_v<T>;
+concept Value = true;
+//!std::is_const_v<T> && !std::is_volatile_v<T> && !std::is_reference_v<T>;
