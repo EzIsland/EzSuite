@@ -40,7 +40,7 @@ MODULES =
 # These modules will be named targets which generate the corresponding EXEs
 MAIN_MODULES =
 
-include $(ROOT_DIR)/src/Makefile
+include $(ROOT_DIR)/src/ezs.mk
 
 
 # UTILITY FUNCTIONS
@@ -67,6 +67,9 @@ getModuleInterfaceFileVar =$(1)_INTERFACE_FILE
 # Retrieve the name of the IMPLEMENTATION_FILE macro for the given module names.
 getModuleImplementationFileVar =$(1)_IMPLEMENTATION_FILE
 
+# Retrieves the macro variable name which contains the HEADER_FILE macro for the given module.
+getModuleSourceHeaderFileVar =$(1)_HEADER_FILE
+
 # Retrieves the macro variable name which contains the interface dependencies for the given module.
 getModuleInterfaceDepsVar =$(1)_INTERFACE_DEPS
 
@@ -74,17 +77,18 @@ getModuleInterfaceDepsVar =$(1)_INTERFACE_DEPS
 # module.
 getModuleImplementationDepsVar =$(1)_IMPLEMENTATION_DEPS
 
-
+# Retrieves the macro variable name for header dependencies.
+getModuleHeaderDepsVar =$(1)_HEADER_DEPS
 
 # MODULE MACRO VAR EXPANSIONS
 
 # Retrieves interface dependencies for the given module. Outputs zero, one, or many space separated
 # module names.
-getModuleInterfaceDeps=$($(call getModuleInterfaceDepsVar,$(1)))
+getModuleInterfaceDeps=$(call getModuleHeaderDepsTransitiveClosure,$($(call getModuleInterfaceDepsVar,$(1))))
 
 # Retrieves implementation dependencies for the given module. Outputs zero, one, or many space separated
 # module names.
-getModuleImplementationDeps=$($(call getModuleImplementationDepsVar,$(1)))
+getModuleImplementationDeps=$(call getModuleHeaderDepsTransitiveClosure,$($(call getModuleImplementationDepsVar,$(1))))
 
 # Retrieves the interface file path for the input module name. May be empty if the module
 # does not specify an interface file.
@@ -93,6 +97,16 @@ getModuleInterfaceFile=$($(call getModuleInterfaceFileVar,$(1)))
 # Retrieves the implementation file path for the input module name. May be empty if the module
 # does not specify an implementation file.
 getModuleImplementationFile=$($(call getModuleImplementationFileVar,$(1)))
+
+# Retrieves the header file path for the input module name. May be empty if no such file is specified.
+getModuleSourceHeaderFile=$($(call getModuleSourceHeaderFileVar,$(1)))
+
+# Retrieves the set of direct header dependencies for the given module.
+getModuleHeaderDeps=$($(call getModuleHeaderDepsVar,$(1)))
+
+# For a given module with a set of header dependencies, retrieves the transitive closure of all
+# its recursive header dependencies.
+getModuleHeaderDepsTransitiveClosure =$(call unique,$(1) $(foreach module,$(1),$(call getModuleHeaderDepsTransitiveClosure,$(call getModuleHeaderDeps,$(module)))))
 
 # Retrieves the set of direct module dependencies for the input module. This is the set of
 # direct interface dependenices and direct implementation dependencies.
@@ -110,12 +124,46 @@ getTransitiveModuleDeps=$(call getModuleDepsTransitiveClosure,$(call getModuleDe
 
 # MODULE to BUILD FILES
 
+MODULE_BUILD_DIR=$(BUILD_DIR)/module
+
 # Retrieves the build directory for the given module name.
 # The build directory's location is dependent on the current build type
-getModuleBuildDir=$(BUILD_DIR)/module/$(1)
+getModuleBuildDir=$(MODULE_BUILD_DIR)/$(1)
+
+# Retrieves the base level include directory under which a module's header file is copied into.
+getModuleBaseIncludeDir=$(call getModuleBuildDir,$(1))/include
+
+# Converts a module of the form a.b.c.D to a/b/c representing the directory structure for including
+# the module.
+getModuleIncludeDirHierarchy=$(call getDir,$(subst .,/,$(1)))
+
+# Retrieves the path to the full include directory in which the module's header file will be copied
+# into.
+getModuleFullIncludeDir=$(call getModuleBaseIncludeDir,$(1))/$(call getModuleIncludeDirHierarchy,$(1))
+
+# Retrieves the full path to the header file location that the module's header file is copied to.
+# Empty if the module does not have a header file.
+getModuleHeaderFile=$(foreach filename,$(call getModuleSourceHeaderFile,$(1)),$(call getModuleFullIncludeDir,$(1))/$(notdir $(filename)))
+
+# Retrieves the list of module header files for a set of input modules.
+getModuleHeaderFileList=$(foreach module,$(1),$(call getModuleHeaderFile,$(module)))
+
+# Retrieves the list of header files for the interface dependencies of the input module
+getModuleInterfaceDepsHeaderFiles=$(call getModuleHeaderFileList,$(call getModuleInterfaceDeps,$(1)))
+
+# Retrieves the list of header files for the implementation dependencies of the input module
+getModuleImplementationDepsHeaderFiles=$(call getModuleHeaderFileList,$(call getModuleImplementationDeps,$(1)))
+
+# Retrieves the module name from the build file
+getModuleNameFromHeaderFile=$(firstword $(subst /, ,$(patsubst $(MODULE_BUILD_DIR)/%,%,$(1))))
+
+BIN_DIR_NAME := bin
 
 # Retrieve the location to place executables
-getExeLocation=$(BUILD_DIR)/exe/$(1)
+getExeLocation=$(BUILD_DIR)/$(BIN_DIR_NAME)/$(1)
+getExeLocationList=$(foreach module,$(1),$(call getExeLocation,$(module)))
+
+getModuleFromExeLocation=$(patsubst $(BUILD_DIR)/$(BIN_DIR_NAME)/%,%,$(1))
 
 # Retrieves the path to the object bmi file for the given module. If the module does not have a
 # module interface file, returns empty.
@@ -153,7 +201,13 @@ getModuleImplementationDepsBmi=$(call getModuleBmiFileList,$(call getModuleImple
 
 
 
+
+
 # FLAGS FOR MODULE DEPS
+
+# For the input module, retrieves the include flag which marks the parent directory
+# of the module's header file. Returns nothing if the module does not specify a header file.
+getModuleIncludeFlag=$(foreach file,$(call getModuleHeaderFile,$(1)),-I$(call getModuleBaseIncludeDir,$(1)))
 
 # For the input module, generates the -fmodule-file=file flag to its BMI file.
 # Returns nothing if the module does not have an interface file
@@ -185,18 +239,34 @@ getModuleImplementationDepsNamedBmiFlags=$(foreach module,$(call getModuleImplem
 # module from a build file input.
 getModuleImplementationDepsNamedBmiFlagsFromBuildFile=$(call getModuleImplementationDepsNamedBmiFlags,$(call getModuleNameFromBuildFile,$(1)))
 
+# Retrieves the list of include flags for each implementation module dependency of the input module.
+getModuleImplementationDepsIncludeFlags=$(foreach module,$(call getModuleImplementationDeps,$(1)),$(call getModuleIncludeFlag,$(module)))
+
+# Retrieves the list of include flags for each implementation module dependency for the module
+# containing the build file specified in the input
+getModuleImplementationDepsIncludeFlagsFromBuildFile=$(call getModuleImplementationDepsIncludeFlags,$(call getModuleNameFromBuildFile,$(1)))
+
+# Retrieves the list of include flags for each interface module dependency of the input module.
+getModuleInterfaceDepsIncludeFlags=$(foreach module,$(call getModuleInterfaceDeps,$(1)),$(call getModuleIncludeFlag,$(module)))
+
+# Retrieves the list of include flags for each interface module dependency for the module
+# containing the build file specified in the input
+getModuleInterfaceDepsIncludeFlagsFromBuildFile=$(call getModuleInterfaceDepsIncludeFlags,$(call getModuleNameFromBuildFile,$(1)))
+
 
 
 # PREREQ COMPUTATION
 
 # Retrieves the set of module bmi prereqs
 getModuleBmiPrereqs=$(call getModuleInterfaceFile,$(1))\
-		    $(call getModuleInterfaceDepsBmi,$(1))
+		    $(call getModuleInterfaceDepsBmi,$(1))\
+		    $(call getModuleInterfaceDepsHeaderFiles,$(1))
 
 # Retrieves the set of module bmi prereqs
 getModuleObjPrereqs=$(call getModuleImplementationFile,$(1))\
 		    $(call getModuleBmiFile,$(1))\
-		    $(call getModuleImplementationDepsBmi,$(1))
+		    $(call getModuleImplementationDepsBmi,$(1))\
+                    $(call getModuleImplementationDepsHeaderFiles,$(1))
 
 # Retrieves the set of bmi obj prereqs
 getModuleBmiObjPrereqs=$(call getModuleBmiFile,$(1))
@@ -233,8 +303,10 @@ cat = printf '$(1)' > $(2)
 
 
 # CXX FLAGS
+LLVM-PROJECT_ROOT:=/home/ezra/Documents/llvm-project/build/master/release
+MSAN-LIBCXX_ROOT:=/home/ezra/Documents/llvm-project/build/master/msan-libcxx
 
-CXX := clang++-12
+CXX :=$(LLVM-PROJECT_ROOT)/bin/clang++
 
 # Flags for each of the various build types
 CXX_DEBUG_FLAGS := -O0 -ggdb
@@ -242,7 +314,7 @@ CXX_RELEASE_FLAGS := -O3 -flto
 CXX_SANITIZE_ADDRESS_FLAGS := -g -O0 -fsanitize=address -fno-omit-frame-pointer
 CXX_SANITIZE_THREAD_FLAGS := -g -O0 -fsanitize=thread -fno-omit-frame-pointer
 CXX_SANITIZE_UNDEFINED_FLAGS := -g -O0 -fsanitize=undefined -fsanitize=implicit-conversion -fsanitize=nullability -fsanitize=integer -fno-omit-frame-pointer
-CXX_SANITIZE_MEMORY_FLAGS := -g -O0 -fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer
+CXX_SANITIZE_MEMORY_FLAGS := -g -O0 -fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer -nostdinc++ -I$(MSAN-LIBCXX_ROOT)/include/c++/v1 -nostdlib++ -L$(MSAN-LIBCXX_ROOT)/lib -lc++msan -lc++abi
 
 # Set build location and flags for particular build type
 BUILD_TYPE := DEBUG
@@ -271,10 +343,10 @@ else
 endif
 
 # Flags common to all build types
-CXX_COMMON_FLAGS = -std=c++20 -fmodules -fno-implicit-module-maps -fno-implicit-modules \
- -fno-autolink -fno-exceptions  -Wall -Wextra -Wpedantic -Werror -Wconversion \
+CXX_COMMON_FLAGS = -std=c++20 -fmodules -fbuiltin-module-map \
+ -fno-autolink -Wall -Wextra -Wpedantic -Werror -Wconversion \
  -pthread -fretain-comments-from-system-headers -stdlib=libc++ -Wno-unused-command-line-argument \
- -Wno-error=unused-variable
+ -Wno-error=unused-variable -Wno-error=unneeded-internal-declaration -fuse-ld=lld
 
 # Flags for the build type currently selected
 CXX_FLAGS := $(CXX_COMMON_FLAGS) $(CXX_BUILD_TYPE_FLAGS)
@@ -306,12 +378,12 @@ head=$(filter-out $(call lastword,$(1)),$(1))
 assembleArguments= \n\t$(foreach arg,$(call head,$(1)),"$(arg)",\n\t) "$(lastword $(1))"\n\t
 
 # Retrieves arguments for building a module interface
-getInterfaceArgs=$(CXX) $(CXX_FLAGS) $(call getModuleInterfaceDepsNamedBmiFlags,$(1)) -c $(call getModuleInterfaceFile,$(1))
+getInterfaceArgs=$(CXX) $(CXX_FLAGS) $(call getModuleInterfaceDepsNamedBmiFlags,$(1)) $(call getModuleInterfaceDepsIncludeFlags,$(1)) -x c++-module --precompile $(call getModuleInterfaceFile,$(1)) 
 
 assembleInterfaceArgs=$(call assembleArguments,$(call getInterfaceArgs,$(1)))
 
 # Retrieves arguments for building a module implementation
-getImplementationArgs=$(CXX) $(CXX_FLAGS) $(call getModuleImplementationDepsNamedBmiFlags,$(1)) $(call getModuleBmiFlag,$(1)) -c $(call getModuleImplementationFile,$(1))
+getImplementationArgs=$(CXX) $(CXX_FLAGS) $(call getModuleImplementationDepsNamedBmiFlags,$(1)) $(call getModuleBmiFlag,$(1)) $(call getModuleImplementationDepsIncludeFlags,$(1)) -x c++ -c $(call getModuleImplementationFile,$(1))
 
 assembleImplementationArgs=$(call assembleArguments,$(call getImplementationArgs,$(1)))
 
@@ -335,6 +407,9 @@ COMPILE_COMMANDS = $(patsubst %}$(COMMA)],%}],[$(foreach module,$(MODULES),$(cal
 # Used the target to build for the recipe that this appears in
 PRINT_TARGET = $(info Building $(patsubst $(BUILD_DIR)/%,%,$@))
 
+# Copy file
+COPY := cp
+
 # Enable secondary expansion of dependency expressions in recipes
 .SECONDEXPANSION:
 
@@ -343,12 +418,16 @@ MAKEFLAGS += --no-builtin-rules --no-builtin-variables
 .SUFFIXES:
 
 
-.PHONY: clean dep-graph compile-commands doc $(MAIN_MODULES)
-
 all: $(MAIN_MODULES)
 
 clean:
 	@$(RM_DIR) $(BUILD_BASE_DIR)
+
+# Builds the header files for the modules by copying them to the build location
+$(call getModuleHeaderFileList,$(MODULES)) : $$(call getModuleSourceHeaderFile,$$(call getModuleNameFromHeaderFile,$$@))
+	$(PRINT_TARGET)
+	@$(MAKE_DIR) $(call getDir, $@)
+	@$(COPY) $< $@
 
 # Builds the module BMI files
 $(call getModuleBmiFileList,$(MODULES)) : $$(call getModuleBmiPrereqsFromBuildFile,$$@)
@@ -356,6 +435,7 @@ $(call getModuleBmiFileList,$(MODULES)) : $$(call getModuleBmiPrereqsFromBuildFi
 	@$(MAKE_DIR) $(call getDir, $@)
 	@$(CXX_COMMAND) $(BUILD_BMI_FLAGS) \
 	$(call getModuleInterfaceDepsNamedBmiFlagsFromBuildFile,$@) \
+        $(call getModuleInterfaceDepsIncludeFlagsFromBuildFile,$@) \
 	-o $@ -c $<
 
 # Builds the module BMI object files
@@ -371,24 +451,45 @@ $(call getModuleObjFileList,$(MODULES)) : $$(call getModuleObjPrereqsFromBuildFi
 	@$(CXX_COMMAND) $(BUILD_OBJ_FLAGS) \
 	$(call getModuleBmiFlagFromBuildFile,$@) \
 	$(call getModuleImplementationDepsNamedBmiFlagsFromBuildFile,$@) \
+        $(call getModuleImplementationDepsIncludeFlagsFromBuildFile,$@) \
 	-o $@ -c $<
 
 # Links all object files into the executable
-$(MAIN_MODULES) : $$(call getModuleAllObjFileList, $$@ $$(call getTransitiveModuleDeps,$$@))
+$(call getExeLocationList,$(MAIN_MODULES)) : $$(call getModuleAllObjFileList,$$(call getModuleFromExeLocation,$$@) $$(call getTransitiveModuleDeps,$$(call getModuleFromExeLocation,$$@)))
 	$(PRINT_TARGET)
-	@$(MAKE_DIR) $(call getDir, $(call getExeLocation,$@))
-	@$(CXX_COMMAND) $(LINK_OBJ_FLAGS) -o $(call getExeLocation,$@) $^
+	$(info $(call getModuleFromExeLocation,$@))
+	@$(MAKE_DIR) $(call getDir, $@)
+	@$(CXX_COMMAND) $(LINK_OBJ_FLAGS) -o $@ $^
 
+# Alias the main modules with the executable location
+$(MAIN_MODULES) : $$(call getExeLocation,$$@)
+
+# Alias each modules with the bmi, bmi object, and object files associated to it
+$(MODULES) : $$(call getModuleBmiFile,$$@)
+$(MODULES) : $$(call getModuleBmiObjFile,$$@)
+$(MODULES) : $$(call getModuleObjFile,$$@)
+$(MODULES) : $$(call getModuleHeaderFile,$$@)
 
 compile-commands: 
 	@$(call cat,$(COMPILE_COMMANDS),compile_commands.json)
 
 dep-graph:
-	@make -Bnd | grep -Ev Makefile | make2graph -b | dot -Tpng -o dep-graph.png
+	@make -Bnd | grep -Ev *.mk | make2graph -b | dot -Tpng -o dep-graph.png
 
 doc:
 	@$(MAKE_DIR) $(BUILD_BASE_DIR)/doc
 	doxygen $(ROOT_DIR)/Doxyfile
 
 
+info:
+	@$(CXX_COMMAND) -x c++ /dev/null -v -Xclang -fsyntax-only -c
 
+test: export MSAN_SYMBOLIZER_PATH = $(LLVM-PROJECT_ROOT)/bin/llvm-symbolizer
+test: ezs.main.Test
+	@$(call getExeLocation,ezs.main.Test)
+
+debug-test: export MSAN_SYMBOLIZER_PATH = $(LLVM-PROJECT_ROOT)/bin/llvm-symbolizer
+debug-test: ezs.main.Test
+	gdb $(call getExeLocation,ezs.main.Test)
+
+.PHONY: info clean dep-graph compile-commands doc $(MAIN_MODULES)

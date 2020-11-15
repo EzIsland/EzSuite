@@ -2,47 +2,35 @@
 /// \file Test.hxx
 /// \brief Module interface file for ezs::test::Test class.
 ///
-module;
-
-#include <map>
-#include <string>
-#include <vector>
-#include <utility>
-#include <functional>
-
 export module ezs.test.Test;
+
+import ezs.test.TestSingleton;
+import ezs.test.TestPoint;
+import ezs.test.TestName;
+import ezs.test.TestResult;
+import ezs.uint_t;
+import <vector>;
+
+import<string>;
+import <optional>;
 
 export
 namespace ezs::test {
 
-class TestSingleton {
+
+class Test {
  public:
-  static TestSingleton& getInstance() noexcept;
-
-  void registerTest(const std::string&, const std::function<void(void)>&) noexcept;
-
-  void runTests() noexcept;
-
- private:
-  std::map<std::string, std::function<void(void)>> mTests;
+  Test() = delete;
+  Test(const Test&) = delete;
+  Test(Test&&) = delete;
+  void operator=(const Test&) = delete;
+  void operator=(Test&&) = delete;
+  
+  Test(const std::vector<std::string>& pName, std::function<void(TestResult&)> pFunction) {
+    TestSingleton::getInstance().registerTest(TestPoint(pName, pFunction));
+}
 };
+
+
 } // namespace ezs::test
 
-module: private;
-
-namespace ezs::test {
-TestSingleton& TestSingleton::getInstance() noexcept {
-  static TestSingleton instance;
-  return instance;
-}
-
-void TestSingleton::registerTest(const std::string& pName, const std::function<void(void)>& pFunction) noexcept {
-  mTests.emplace(std::make_pair(pName, pFunction));
-}
-
-void TestSingleton::runTests() noexcept {
-  for(const auto& [name, function] : mTests) {
-    function();
-  }
-}
-}

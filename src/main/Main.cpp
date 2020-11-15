@@ -4,19 +4,15 @@
 ///
 //import ezs;
 
-//import ezs.adt.Value;
-#include <iostream>
-#include <type_traits>
-class A {
- public:
-  A() {
-    std::cout << std::is_const_v<decltype(this)> << std::endl;
-  }
-};
+
+import <vector>;
+import <string>;
+import <iostream>;
+import <thread>;
+import ezs;
 
 int main(void) {
-  A a;
-  const A b;
+  std::cout << std::thread::hardware_concurrency() << std::endl;
 }
 
 
