@@ -3,7 +3,7 @@ import ezs.adt.Tuple;
 #include "ezs/test/TEST.hpp"
 
 import ezs.uint_t;
-import ezs.type.forward;
+import ezs.tfl.forward;
 
 
 namespace ezs::adt {

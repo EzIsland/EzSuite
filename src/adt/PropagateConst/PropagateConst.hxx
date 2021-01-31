@@ -3,10 +3,10 @@ export module ezs.adt.PropagateConst;
 import ezs.uint_t;
 import ezs.adt.ObjectPtr;
 import ezs.adt.ArrayPtr;
-import ezs.type.forward;
-import ezs.type.ForwardRefOf;
-import ezs.type.move;
-import ezs.type.ForwardRef;
+import ezs.tfl.forward;
+import ezs.tfl.ForwardRefOf;
+import ezs.tfl.move;
+import ezs.tfl.ForwardRef;
 
 export
 namespace ezs::adt {
@@ -20,19 +20,19 @@ template <ObjectPtr T> class PropagateConst<T> final {
   PropagateConst(const PropagateConst<T>&) = delete;
   PropagateConst<T>& PropagetConst(const PropagateConst<T>&) = delete;
 
-  template <type::ForwardRef... Args>
+  template <tfl::ForwardRef... Args>
   [[nodiscard]] explicit constexpr PropagateConst(Args &&... pArgs) noexcept
-      : mPtr(type::forward<Args>(pArgs)...) {}
+      : mPtr(tfl::forward<Args>(pArgs)...) {}
 
-  template<type::ForwardRefOf<T> U>
+  template<tfl::ForwardRefOf<T> U>
   [[nodiscard]] explicit constexpr PropagateConst(U&& pPtr) noexcept
-      : mPtr(type::forward<U>(pPtr)) { }
+      : mPtr(tfl::forward<U>(pPtr)) { }
   
   [[nodiscard]] explicit constexpr PropagateConst(PropagateConst<T>&& pOther) noexcept
-      : mPtr(type::move(pOther.mPtr)) { }
+      : mPtr(tfl::move(pOther.mPtr)) { }
   
   constexpr PropagateConst<T>& operator=(PropagateConst<T>&& pOther) & noexcept {
-    mPtr = type::move(pOther.mPtr);
+    mPtr = tfl::move(pOther.mPtr);
   }
 
   [[nodiscard]] constexpr ObjectType& operator*() noexcept {

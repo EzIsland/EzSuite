@@ -1,6 +1,6 @@
 export module ezs.adt.ObjectPtr;
 
-import ezs.type.Object;
+import ezs.tfl.Object;
 
 export
 namespace ezs::adt {

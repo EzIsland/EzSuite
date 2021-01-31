@@ -1,16 +1,16 @@
 export module ezs.adt.Tuple;
-import ezs.type.Value;
-import ezs.type.ForwardRefOf;
-import ezs.type.ForwardRef;
-import ezs.type.forward;
+import ezs.tfl.Value;
+import ezs.tfl.ForwardRefOf;
+import ezs.tfl.ForwardRef;
+import ezs.tfl.forward;
 import ezs.uint_t;
-import ezs.type.SelectType;
+import ezs.tfl.SelectType;
 
 #include "ezs/adt/NOT_STANDARD_LAYOUT.hpp"
 
 namespace ezs::adt {
 
-template <type::Value HeadElement, type::Value... TailElements>
+template <tfl::Value HeadElement, tfl::Value... TailElements>
 class TupleHelper final {
 public:
   // Deleted default ctor
@@ -24,15 +24,15 @@ public:
   constexpr ~TupleHelper() noexcept = default;
 
   // Construct each element of tuple via forwarding reference.
-  template <type::ForwardRefOf<HeadElement> HeadArg,
-            type::ForwardRefOf<TailElements>... TailArgs>
+  template <tfl::ForwardRefOf<HeadElement> HeadArg,
+            tfl::ForwardRefOf<TailElements>... TailArgs>
   constexpr explicit TupleHelper(HeadArg &&pHeadArg, TailArgs &&... pTailArgs)
-      : mHead(type::forward<HeadArg>(pHeadArg)),
-        mTail(type::forward<TailArgs>(pTailArgs)...) {}
+      : mHead(tfl::forward<HeadArg>(pHeadArg)),
+        mTail(tfl::forward<TailArgs>(pTailArgs)...) {}
 
   // Retrieves the element by its index.
   template <uint_t idx>
-  [[nodiscard]] constexpr type::SelectType<idx, HeadElement,
+  [[nodiscard]] constexpr tfl::SelectType<idx, HeadElement,
                                            TailElements...> &
       get() &
       noexcept {
@@ -45,7 +45,7 @@ public:
 
   // Const version of get<idx>()
   template <uint_t idx>
-  [[nodiscard]] constexpr const type::SelectType<idx, HeadElement,
+  [[nodiscard]] constexpr const tfl::SelectType<idx, HeadElement,
                                                  TailElements...> &
   get() const &noexcept {
     if constexpr (idx == 0) {
@@ -60,7 +60,7 @@ private:
   TupleHelper<TailElements...> mTail;
 };
 
-template <type::Value HeadElement>
+template <tfl::Value HeadElement>
 class TupleHelper<HeadElement> final {
 public:
   // Deleted default ctor
@@ -74,9 +74,9 @@ public:
   constexpr ~TupleHelper() noexcept = default;
 
   // Construct each element of tuple via forwarding reference.
-  template <type::ForwardRefOf<HeadElement> HeadArg>
+  template <tfl::ForwardRefOf<HeadElement> HeadArg>
   constexpr explicit TupleHelper(HeadArg &&pHeadArg)
-      : mHead(type::forward<HeadArg>(pHeadArg)) {}
+      : mHead(tfl::forward<HeadArg>(pHeadArg)) {}
 
   // Retrieves the element by its index.
   template <uint_t idx>
@@ -94,7 +94,7 @@ private:
   HeadElement mHead;
 };
 
-export template <type::Value... Elements> class Tuple final {
+export template <tfl::Value... Elements> class Tuple final {
 public:
   Tuple() = delete;
   void operator=(const Tuple &&) = delete;
@@ -108,9 +108,9 @@ public:
 
   constexpr ~Tuple() noexcept = default;
 
-  template <type::ForwardRefOf<Elements>... Args>
+  template <tfl::ForwardRefOf<Elements>... Args>
   explicit constexpr Tuple(Args &&... pArgs) noexcept
-      : mTuple(type::forward<Args>(pArgs)...) {}
+      : mTuple(tfl::forward<Args>(pArgs)...) {}
 
   template <uint_t idx> [[nodiscard]] constexpr auto &get() & noexcept { return mTuple.template get<idx>(); }
 
