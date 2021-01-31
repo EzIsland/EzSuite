@@ -14,3 +14,4 @@ include $(SRC_TEST_DIR)/TestResult/TestResult.mk
 include $(SRC_TEST_DIR)/TestName/TestName.mk
 include $(SRC_TEST_DIR)/TestFailure/TestFailure.mk
 include $(SRC_TEST_DIR)/TestRunner/TestRunner.mk
+include $(SRC_TEST_DIR)/TEST/TEST.mk

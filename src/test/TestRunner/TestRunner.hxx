@@ -47,10 +47,13 @@ class TestRunner final {
     }
     std::cout << "\nOverall results: " << (testFailures ? "FAILED" : "PASSED")
               << "\n"
-              << "  Tests: " << totalTests << "\n"
-              << "  Test Failures: " << testFailures << "\n"
-              << "  Assertions: " << totalAssertions << "\n"
-              << "  Failed Assertions: " << assertionFailures << "\n";
+              << "  Failing Tests: " << testFailures << "\n"
+              << "  Passing Tests: " << totalTests - testFailures << "\n"
+              << "  Total Tests: " << totalTests << "\n"
+              << "  Failing Assertions: " << assertionFailures << "\n"
+              << "  Passing Assertions: " << totalAssertions - assertionFailures << "\n"
+              << "  Total Assertions: " << totalAssertions << "\n";
+    
     std::cout << std::endl;
     return static_cast<int>(testFailures);
   }
