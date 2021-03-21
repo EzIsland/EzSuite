@@ -13,6 +13,8 @@ export import ezs.adt.PropagateConst;
 export import ezs.adt.RawObjectPtr;
 export import ezs.adt.RawArrayPtr;
 export import ezs.adt.NotStandardLayout;
+export import ezs.adt.ForwardingTuple;
+export import ezs.adt.Vector;
 
 ///
 /// \brief Abstract Data Types

@@ -11,6 +11,7 @@ export import ezs.test.TestResult;
 export import ezs.test.TestSingleton;
 export import ezs.test.TestFailure;
 export import ezs.test.TestRunner;
+export import ezs.test.Tester;
 
 ///
 /// \brief EzSuite Testing Framework

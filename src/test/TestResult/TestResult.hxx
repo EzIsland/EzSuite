@@ -1,7 +1,8 @@
 export module ezs.test.TestResult;
 
 import ezs.uint_t;
-
+import ezs.adt.String;
+import ezs.cfl.SourceLocation;
 import ezs.test.TestFailure;
 import <string>;
 import <vector>;
@@ -16,15 +17,20 @@ class TestResult final {
 
   TestResult() : mFailures(), mTotalAssertions(0) { }
 
-  void assert(bool pValue,
-              const std::string& pMessage = "",
-              const std::source_location& pLocation = std::source_location::current()) {
+  // void assert(bool pValue,
+  //             const std::string& pMessage = "",
+  //             const std::source_location& pLocation = std::source_location::current()) {
+  //   ++mTotalAssertions;
+  //   if(!pValue) {
+  //     mFailures.push_back({pLocation.line(),
+  //                            pLocation.file_name(),
+  //                            pMessage});
+  //   }
+  // }
+
+  void addFailure(const adt::String& pMessage, const cfl::SourceLocation& pLocation) {
     ++mTotalAssertions;
-    if(!pValue) {
-      mFailures.push_back({pLocation.line(),
-                             pLocation.file_name(),
-                             pMessage});
-    }
+    mFailures.push_back({pLocation.getLine(), pLocation.getFileName(), pMessage});
   }
 
   bool passed() const {

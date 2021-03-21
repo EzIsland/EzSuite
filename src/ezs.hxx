@@ -7,6 +7,7 @@ export module ezs;
 export import ezs.adt;
 export import ezs.test;
 export import ezs.tfl;
+export import ezs.cfl;
 
 ///
 /// \brief EzSuite Root

@@ -2,6 +2,7 @@ export module ezs.test.TestPoint;
 
 import ezs.test.TestFailure;
 import ezs.test.TestResult;
+import ezs.test.Tester;
 import ezs.test.TestName;
 import ezs.uint_t;
 
@@ -15,14 +16,14 @@ export namespace ezs::test {
 class TestPoint final {
  public:
   TestPoint(const std::vector<std::string>& pName,
-            std::function<void(TestResult&)> pTest)
+            std::function<void(Tester&)> pTest)
        : mTest(pTest), mName(pName) {}
 
   TestResult run() {
-    TestResult result;
+    Tester tester;
     
-    mTest(result);
-    return result;
+    mTest(tester);
+    return tester.getResult();
   }
 
   TestName getName() const {
@@ -30,7 +31,7 @@ class TestPoint final {
   }
 
  private:
-  std::function<void(TestResult&)> mTest;
+  std::function<void(Tester&)> mTest;
   TestName mName;
 };
 } // namespace ezs::test

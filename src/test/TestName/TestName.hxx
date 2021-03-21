@@ -13,8 +13,11 @@ class TestName {
 
   std::string toString() const {
     std::string result("");
-    for(const std::string& name : mName) {
-      result += name + std::string(".");
+    for(std::size_t idx = 0; idx != mName.size(); ++idx) {
+      result += mName[idx];
+      if(idx != mName.size() - 1) {
+        result += std::string(".");
+      }
     }
     return result;
   }

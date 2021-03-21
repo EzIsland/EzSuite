@@ -173,6 +173,16 @@ getModuleBmiFile=$(foreach file,$(call getModuleInterfaceFile,$(1)),$(call getMo
 # have no interface files.
 getModuleBmiFileList=$(foreach module,$(1),$(call getModuleBmiFile,$(module)))
 
+PP_EXT :=pp
+
+getModulePPInterfaceFile=$(foreach file,$(call getModuleInterfaceFile,$(1)),$(call getModuleBuildDir,$(1))/$(call getBaseFileName,$(file)).$(BMI_EXT).$(PP_EXT))
+
+getModulePPInterfaceFileList=$(foreach module,$(1),$(call getModulePPInterfaceFile,$(module)))
+
+getModulePPImplementationFile=$(foreach file,$(call getModuleImplementationFile,$(1)),$(call getModuleBuildDir,$(1))/$(call getBaseFileName,$(file)).$(PP_EXT))
+
+getModulePPImplementationFileList=$(foreach module,$(1),$(call getModulePPImplementationFile,$(module)))
+
 # Retrieves the location of the compiled object bmi files to generate for the given module.
 # Returns empty if no interface file for the module exists.
 getModuleBmiObjFile=$(foreach file,$(call getModuleBmiFile,$(1)),$(file).$(OBJ_EXT))
@@ -342,11 +352,34 @@ else
   $(warning Unkown build type '$(BUILD_TYPE)'. Defaulting to DEBUG build.)
 endif
 
+BOOST_STACKTRACE_BACKTRACE_CXX_FLAGS := -DBOOST_STACKTRACE_USE_BACKTRACE \
+ -DBOOST_STACKTRACE_BACKTRACE_INCLUDE_FILE=\</usr/lib/gcc/x86_64-linux-gnu/10/include/backtrace.h\>
+
+BOOST_STACKTRACE_BACKTRACE_LINKER_FLAGS := -ldl -lbacktrace 
+
+BOOST_STACKTRACE_ADDR2LINE_CXX_FLAGS := -DBOOST_STACKTRACE_USE_ADDR2LINE
+
+BOOST_STACKTRACE_ADDR2LINE_LINKER_FLAGS := -ldl
+
+BOOST_STACKTRACE_IMPL := ADDR2LINE
+
+ifeq ($(BOOST_STACKTRACE_IMPL), BACKTRACE)
+  BOOST_STACKTRACE_CXX_FLAGS := $(BOOST_STACKTRACE_BACKTRACE_CXX_FLAGS)
+  BOOST_STACKTRACE_LINKER_FLAGS := $(BOOST_STACKTRACE_BACKTRACE_LINKER_FLAGS)
+else ifeq ($(BOOST_STACKTRACE_IMPL), ADDR2LINE)
+  BOOST_STACKTRACE_CXX_FLAGS := $(BOOST_STACKTRACE_ADDR2LINE_CXX_FLAGS)
+  BOOST_STACKTRACE_LINKER_FLAGS := $(BOOST_STACKTRACE_ADDR2LINE_LINKER_FLAGS)
+endif
+
+
 # Flags common to all build types
 CXX_COMMON_FLAGS = -std=c++20 -fmodules -fbuiltin-module-map \
- -fno-autolink -Wall -Wextra -Wpedantic -Werror -Wconversion \
+ -fno-autolink -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Werror \
+  -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-global-constructors -Wno-padded \
  -pthread -fretain-comments-from-system-headers -stdlib=libc++ -Wno-unused-command-line-argument \
- -Wno-error=unused-variable -Wno-error=unneeded-internal-declaration -fuse-ld=lld
+ -Wno-error=unused-variable -Wno-error=unneeded-internal-declaration -fuse-ld=lld \
+ -Wno-gnu-zero-variadic-macro-arguments \
+  $(BOOST_STACKTRACE_CXX_FLAGS)
 
 # Flags for the build type currently selected
 CXX_FLAGS := $(CXX_COMMON_FLAGS) $(CXX_BUILD_TYPE_FLAGS)
@@ -364,7 +397,7 @@ BUILD_BMI_OBJ_FLAGS := -x pcm
 BUILD_OBJ_FLAGS := -x c++ 
 
 # Flags for linking all object files together
-LINK_OBJ_FLAGS := 
+LINK_OBJ_FLAGS := $(BOOST_STACKTRACE_LINKER_FLAGS)
 
 
 # COMPILE COMMANDS
@@ -418,7 +451,7 @@ MAKEFLAGS += --no-builtin-rules --no-builtin-variables
 .SUFFIXES:
 
 
-all: $(MAIN_MODULES)
+all: $(MAIN_MODULES) compile-commands
 
 clean:
 	@$(RM_DIR) $(BUILD_BASE_DIR)
@@ -438,6 +471,14 @@ $(call getModuleBmiFileList,$(MODULES)) : $$(call getModuleBmiPrereqsFromBuildFi
         $(call getModuleInterfaceDepsIncludeFlagsFromBuildFile,$@) \
 	-o $@ -c $<
 
+$(call getModulePPInterfaceFileList,$(MODULES)) : $$(call getModuleBmiPrereqsFromBuildFile,$$@)
+	$(PRINT_TARGET)
+	@$(MAKE_DIR) $(call getDir, $@)
+	@$(CXX_COMMAND) $(BUILD_BMI_FLAGS) \
+	$(call getModuleInterfaceDepsNamedBmiFlagsFromBuildFile,$@) \
+        $(call getModuleInterfaceDepsIncludeFlagsFromBuildFile,$@) \
+	-o $@ -E $< 
+
 # Builds the module BMI object files
 $(call getModuleBmiObjFileList,$(MODULES)) : $$(call getModuleBmiObjPrereqsFromBuildFile,$$@)
 	$(PRINT_TARGET)
@@ -453,6 +494,15 @@ $(call getModuleObjFileList,$(MODULES)) : $$(call getModuleObjPrereqsFromBuildFi
 	$(call getModuleImplementationDepsNamedBmiFlagsFromBuildFile,$@) \
         $(call getModuleImplementationDepsIncludeFlagsFromBuildFile,$@) \
 	-o $@ -c $<
+
+$(call getModulePPImplementationFileList,$(MODULES)) : $$(call getModuleObjPrereqsFromBuildFile,$$@)
+	$(PRINT_TARGET)
+	@$(MAKE_DIR) $(call getDir, $@)
+	@$(CXX_COMMAND) $(BUILD_OBJ_FLAGS) \
+	$(call getModuleBmiFlagFromBuildFile,$@) \
+	$(call getModuleImplementationDepsNamedBmiFlagsFromBuildFile,$@) \
+        $(call getModuleImplementationDepsIncludeFlagsFromBuildFile,$@) \
+	-o $@ -E $<
 
 # Links all object files into the executable
 $(call getExeLocationList,$(MAIN_MODULES)) : $$(call getModuleAllObjFileList,$$(call getModuleFromExeLocation,$$@) $$(call getTransitiveModuleDeps,$$(call getModuleFromExeLocation,$$@)))
@@ -470,7 +520,8 @@ $(MODULES) : $$(call getModuleBmiObjFile,$$@)
 $(MODULES) : $$(call getModuleObjFile,$$@)
 $(MODULES) : $$(call getModuleHeaderFile,$$@)
 
-compile-commands: 
+compile-commands:
+	$(info Making Compile Commands)
 	@$(call cat,$(COMPILE_COMMANDS),compile_commands.json)
 
 dep-graph:
@@ -480,6 +531,7 @@ doc:
 	@$(MAKE_DIR) $(BUILD_BASE_DIR)/doc
 	doxygen $(ROOT_DIR)/Doxyfile
 
+pp: $(call getModulePPImplementationFileList,$(MODULES)) $(call getModulePPInterfaceFileList,$(MODULES))
 
 info:
 	@$(CXX_COMMAND) -x c++ /dev/null -v -Xclang -fsyntax-only -c

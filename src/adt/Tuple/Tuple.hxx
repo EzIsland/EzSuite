@@ -5,10 +5,17 @@ import ezs.tfl.ForwardRef;
 import ezs.tfl.forward;
 import ezs.uint_t;
 import ezs.tfl.SelectType;
+import ezs.tfl.move;
+import ezs.tfl.InstantiationOf;
+import ezs.tfl.IndexSequence;
+import ezs.tfl.ConstructibleFrom;
+import ezs.adt.ForwardingTuple;
 
 #include "ezs/adt/NOT_STANDARD_LAYOUT.hpp"
 
 namespace ezs::adt {
+
+export struct ConstructInPlace {};
 
 template <tfl::Value HeadElement, tfl::Value... TailElements>
 class TupleHelper final {
@@ -29,6 +36,29 @@ public:
   constexpr explicit TupleHelper(HeadArg &&pHeadArg, TailArgs &&... pTailArgs)
       : mHead(tfl::forward<HeadArg>(pHeadArg)),
         mTail(tfl::forward<TailArgs>(pTailArgs)...) {}
+
+  template<typename... Ts,
+           tfl::InstantiationOf<ForwardingTuple>... Tail>
+  requires(tfl::ConstructibleFrom<HeadElement, Ts...>)
+  [[nodiscard]] constexpr explicit TupleHelper(
+      ConstructInPlace,
+      const ForwardingTuple<Ts...>& pHead,
+      const Tail&... pTail) noexcept
+      : TupleHelper(ConstructInPlace{}, pHead, tfl::MakeIndexSequenceFor<Ts...>{}, pTail...) {
+  }
+
+  template<typename... Ts,
+           uint_t... idx,
+           tfl::InstantiationOf<ForwardingTuple>... Tail>
+  requires(tfl::ConstructibleFrom<HeadElement, Ts...>)
+  [[nodiscard]] constexpr explicit TupleHelper(
+      ConstructInPlace,
+      const ForwardingTuple<Ts...>& pHead,
+      tfl::IndexSequence<idx...>,
+      const Tail&... pTail)
+      : mHead{pHead.template get<idx>()...},
+        mTail{ConstructInPlace{}, pTail...} {
+  }
 
   // Retrieves the element by its index.
   template <uint_t idx>
@@ -56,8 +86,8 @@ public:
   }
 
 private:
-  HeadElement mHead;
-  TupleHelper<TailElements...> mTail;
+  [[no_unique_address]] HeadElement mHead;
+  [[no_unique_address]] TupleHelper<TailElements...> mTail;
 };
 
 template <tfl::Value HeadElement>
@@ -78,6 +108,21 @@ public:
   constexpr explicit TupleHelper(HeadArg &&pHeadArg)
       : mHead(tfl::forward<HeadArg>(pHeadArg)) {}
 
+  template<typename... Ts>
+  requires(tfl::ConstructibleFrom<HeadElement, Ts...>)
+  [[nodiscard]] constexpr explicit TupleHelper(
+      ConstructInPlace,
+      const ForwardingTuple<Ts...>& pHead) noexcept
+      : TupleHelper(ConstructInPlace{}, pHead, tfl::MakeIndexSequenceFor<Ts...>{}) { }
+
+  template<typename... Ts,
+           uint_t... idx>
+  requires(tfl::ConstructibleFrom<HeadElement, Ts...>)
+  [[nodiscard]] constexpr explicit TupleHelper(
+      ConstructInPlace,
+      const ForwardingTuple<Ts...>& pHead,
+      tfl::IndexSequence<idx...>) : mHead{pHead.template get<idx>()...} { }
+
   // Retrieves the element by its index.
   template <uint_t idx>
   [[nodiscard]] constexpr HeadElement& get() & noexcept {
@@ -94,12 +139,15 @@ private:
   HeadElement mHead;
 };
 
+
 export template <tfl::Value... Elements> class Tuple final {
 public:
   Tuple() = delete;
-  void operator=(const Tuple &&) = delete;
-  Tuple(const Tuple &&) = delete;
-
+  
+  template<tfl::InstantiationOf<ForwardingTuple>... ForwardingTuples>
+  [[nodiscard]] constexpr Tuple(ConstructInPlace, const ForwardingTuples&... pArgs) noexcept
+      : mTuple(ConstructInPlace{}, pArgs...) {
+  }
   
   [[nodiscard]] constexpr Tuple(const Tuple &) noexcept = default;
   [[nodiscard]] constexpr Tuple(Tuple &&) noexcept = default;

@@ -7,7 +7,7 @@ export module ezs.test.Test;
 import ezs.test.TestSingleton;
 import ezs.test.TestPoint;
 import ezs.test.TestName;
-import ezs.test.TestResult;
+import ezs.test.Tester;
 import ezs.uint_t;
 import <vector>;
 
@@ -26,7 +26,7 @@ class Test {
   void operator=(const Test&) = delete;
   void operator=(Test&&) = delete;
   
-  Test(const std::vector<std::string>& pName, std::function<void(TestResult&)> pFunction) {
+  Test(const std::vector<std::string>& pName, std::function<void(Tester&)> pFunction) {
     TestSingleton::getInstance().registerTest(TestPoint(pName, pFunction));
 }
 };

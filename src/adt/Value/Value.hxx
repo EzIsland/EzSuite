@@ -2,11 +2,9 @@
 /// \file Value.hxx
 /// \brief Module interface file for the ezs::adt::Value concept.
 ///
-module;
-
-#include <type_traits>
-
 export module ezs.adt.Value;
+
+import <type_traits>;
 
 ///
 /// \brief Concept representing non cv-qualified non-reference types.
