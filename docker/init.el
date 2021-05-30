@@ -19,7 +19,7 @@
 (require 'lsp-mode)
 (require 'company)
 (require 'flycheck)
-(setq lsp-clients-clangd-executable "clangd")
+(setq lsp-clients-clangd-executable "/llvm-project/release/bin/clangd")
 (setq lsp-log-io t)
 (add-hook 'c-mode-hook #'lsp)
 (add-hook 'c++-mode-hook #'lsp)

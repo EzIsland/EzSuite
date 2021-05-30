@@ -1,19 +1,21 @@
 diff --git a/libcxx/docs/FeatureTestMacroTable.rst b/libcxx/docs/FeatureTestMacroTable.rst
+index ed05488fa711..d76c2b45aba5 100644
 --- a/libcxx/docs/FeatureTestMacroTable.rst
 +++ b/libcxx/docs/FeatureTestMacroTable.rst
-@@ -200,6 +200,8 @@
+@@ -201,6 +201,8 @@ Status
+     ``__cpp_lib_concepts``                            *unimplemented*
      ------------------------------------------------- -----------------
-     ``__cpp_lib_ranges``                              *unimplemented*  
-     ------------------------------------------------- -----------------
+     ``__cpp_lib_constexpr_algorithms``                *unimplemented*
++    -------------------------------------------------------------------
 +    ``__cpp_lib_source_location``                     ``201907L``      
-+    ------------------------------------------------- -----------------
-     ``__cpp_lib_span``                                ``202002L``      
      ------------------------------------------------- -----------------
-     ``__cpp_lib_three_way_comparison``                *unimplemented*  
+     ``__cpp_lib_constexpr_complex``                   *unimplemented*
+     ------------------------------------------------- -----------------
 diff --git a/libcxx/include/CMakeLists.txt b/libcxx/include/CMakeLists.txt
+index 29a317b8ae9a..2c67356af65f 100644
 --- a/libcxx/include/CMakeLists.txt
 +++ b/libcxx/include/CMakeLists.txt
-@@ -129,6 +129,7 @@
+@@ -136,6 +136,7 @@ set(files
    set
    setjmp.h
    shared_mutex
@@ -22,9 +24,10 @@ diff --git a/libcxx/include/CMakeLists.txt b/libcxx/include/CMakeLists.txt
    sstream
    stack
 diff --git a/libcxx/include/module.modulemap b/libcxx/include/module.modulemap
+index 750cd3858887..9cc800dd9064 100644
 --- a/libcxx/include/module.modulemap
 +++ b/libcxx/include/module.modulemap
-@@ -594,6 +594,10 @@
+@@ -599,6 +599,10 @@ module std [system] {
        header "experimental/set"
        export *
      }
@@ -37,6 +40,7 @@ diff --git a/libcxx/include/module.modulemap b/libcxx/include/module.modulemap
        export *
 diff --git a/libcxx/include/source_location b/libcxx/include/source_location
 new file mode 100644
+index 000000000000..84805cde4874
 --- /dev/null
 +++ b/libcxx/include/source_location
 @@ -0,0 +1,87 @@
@@ -128,37 +132,32 @@ new file mode 100644
 +
 +#endif // _LIBCPP_SOURCE_LOCATION
 diff --git a/libcxx/include/version b/libcxx/include/version
+index 813bc1ab9e6a..27cb9579cd10 100644
 --- a/libcxx/include/version
 +++ b/libcxx/include/version
-@@ -99,6 +99,7 @@
- __cpp_lib_shared_ptr_arrays                             201611L <memory>
- __cpp_lib_shared_ptr_weak_type                          201606L <memory>
- __cpp_lib_shared_timed_mutex                            201402L <shared_mutex>
-+__cpp_lib_source_location                               201907L <source_location>
- __cpp_lib_span                                          202002L <span>
- __cpp_lib_string_udls                                   201304L <string>
- __cpp_lib_string_view                                   201606L <string> <string_view>
-@@ -238,6 +239,7 @@
- # endif
- # define __cpp_lib_list_remove_return_type              201806L
- // # define __cpp_lib_ranges                               201811L
+@@ -342,6 +342,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
+ # define __cpp_lib_shift                                201806L
+ // # define __cpp_lib_smart_ptr_for_overwrite              202002L
+ // # define __cpp_lib_source_location                      201907L
 +# define __cpp_lib_source_location                      201907L
  # define __cpp_lib_span                                 202002L
- // # define __cpp_lib_three_way_comparison                 201711L
- # define __cpp_lib_to_array                             201907L
+ # define __cpp_lib_ssize                                201902L
+ # define __cpp_lib_starts_ends_with                     201711L
 diff --git a/libcxx/test/libcxx/double_include.sh.cpp b/libcxx/test/libcxx/double_include.sh.cpp
+index 5e6fa2b14e23..93109497a51f 100644
 --- a/libcxx/test/libcxx/double_include.sh.cpp
 +++ b/libcxx/test/libcxx/double_include.sh.cpp
-@@ -110,6 +110,7 @@
+@@ -155,6 +155,7 @@
  #ifndef _LIBCPP_HAS_NO_THREADS
- #include <shared_mutex>
+ #    include <shared_mutex>
  #endif
 +#include <source_location>
  #include <span>
- #include <sstream>
- #include <stack>
+ #ifndef _LIBCPP_HAS_NO_LOCALIZATION
+ #    include <sstream>
 diff --git a/libcxx/test/libcxx/language.support/support.srcloc/source_location.pass.cpp b/libcxx/test/libcxx/language.support/support.srcloc/source_location.pass.cpp
 new file mode 100644
+index 000000000000..162677e93c29
 --- /dev/null
 +++ b/libcxx/test/libcxx/language.support/support.srcloc/source_location.pass.cpp
 @@ -0,0 +1,43 @@
@@ -207,6 +206,7 @@ new file mode 100644
 +}
 diff --git a/libcxx/test/std/language.support/support.limits/support.limits.general/source_location.version.pass.cpp b/libcxx/test/std/language.support/support.limits/support.limits.general/source_location.version.pass.cpp
 new file mode 100644
+index 000000000000..df9158a8f5a3
 --- /dev/null
 +++ b/libcxx/test/std/language.support/support.limits/support.limits.general/source_location.version.pass.cpp
 @@ -0,0 +1,52 @@
@@ -263,65 +263,26 @@ new file mode 100644
 +
 +int main(int, char**) { return 0; }
 diff --git a/libcxx/test/std/language.support/support.limits/support.limits.general/version.version.pass.cpp b/libcxx/test/std/language.support/support.limits/support.limits.general/version.version.pass.cpp
+index 9e96e2e116e0..5eebe39a7096 100644
 --- a/libcxx/test/std/language.support/support.limits/support.limits.general/version.version.pass.cpp
 +++ b/libcxx/test/std/language.support/support.limits/support.limits.general/version.version.pass.cpp
-@@ -86,6 +86,7 @@
-     __cpp_lib_shared_ptr_arrays                    201611L [C++17]
-     __cpp_lib_shared_ptr_weak_type                 201606L [C++17]
-     __cpp_lib_shared_timed_mutex                   201402L [C++14]
-+    __cpp_lib_source_location                      201907L [C++2a]
-     __cpp_lib_span                                 202002L [C++2a]
-     __cpp_lib_string_udls                          201304L [C++14]
-     __cpp_lib_string_view                          201606L [C++17]
-@@ -393,6 +394,10 @@
- #   error "__cpp_lib_shared_timed_mutex should not be defined before c++14"
- # endif
- 
-+#ifdef __cpp_lib_source_location
-+#error "__cpp_lib_source_location should not be defined before c++2a"
-+#endif
-+
- # ifdef __cpp_lib_span
- #   error "__cpp_lib_span should not be defined before c++2a"
- # endif
-@@ -790,6 +795,10 @@
- #   endif
- # endif
- 
-+#ifdef __cpp_lib_source_location
-+#error "__cpp_lib_source_location should not be defined before c++2a"
-+#endif
-+
- # ifdef __cpp_lib_span
- #   error "__cpp_lib_span should not be defined before c++2a"
- # endif
-@@ -1397,6 +1406,10 @@
- #   endif
- # endif
- 
-+#ifdef __cpp_lib_source_location
-+#error "__cpp_lib_source_location should not be defined before c++2a"
-+#endif
-+
- # ifdef __cpp_lib_span
- #   error "__cpp_lib_span should not be defined before c++2a"
- # endif
-@@ -2142,6 +2155,13 @@
- #   endif
+@@ -4288,6 +4288,13 @@
+ #   error "__cpp_lib_shift should have the value 201806L in c++2b"
  # endif
  
 +#ifndef __cpp_lib_source_location
-+#error "__cpp_lib_source_location should be defined in c++2a"
++#error "__cpp_lib_source_location should be defined in c++20"
 +#endif
 +#if __cpp_lib_source_location != 201907L
-+#error "__cpp_lib_source_location should have the value 201907L in c++2a"
++#error "__cpp_lib_source_location should have the value 201907L in c++20"
 +#endif
 +
- # ifndef __cpp_lib_span
- #   error "__cpp_lib_span should be defined in c++2a"
- # endif
+ # if !defined(_LIBCPP_VERSION)
+ #   ifndef __cpp_lib_smart_ptr_for_overwrite
+ #     error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++2b"
 diff --git a/libcxx/test/std/language.support/support.srcloc/class/source_location.pass.cpp b/libcxx/test/std/language.support/support.srcloc/class/source_location.pass.cpp
 new file mode 100644
+index 000000000000..d089003cb088
 --- /dev/null
 +++ b/libcxx/test/std/language.support/support.srcloc/class/source_location.pass.cpp
 @@ -0,0 +1,56 @@
@@ -383,6 +344,7 @@ new file mode 100644
 +}
 diff --git a/libcxx/test/std/language.support/support.srcloc/cons/current.pass.cpp b/libcxx/test/std/language.support/support.srcloc/cons/current.pass.cpp
 new file mode 100644
+index 000000000000..ab51d7218967
 --- /dev/null
 +++ b/libcxx/test/std/language.support/support.srcloc/cons/current.pass.cpp
 @@ -0,0 +1,93 @@
@@ -481,6 +443,7 @@ new file mode 100644
 +}
 diff --git a/libcxx/test/std/language.support/support.srcloc/obs/column.pass.cpp b/libcxx/test/std/language.support/support.srcloc/obs/column.pass.cpp
 new file mode 100644
+index 000000000000..d4ef60dedea7
 --- /dev/null
 +++ b/libcxx/test/std/language.support/support.srcloc/obs/column.pass.cpp
 @@ -0,0 +1,43 @@
@@ -529,6 +492,7 @@ new file mode 100644
 +}
 diff --git a/libcxx/test/std/language.support/support.srcloc/obs/file_name.pass.cpp b/libcxx/test/std/language.support/support.srcloc/obs/file_name.pass.cpp
 new file mode 100644
+index 000000000000..6498c4bc05c6
 --- /dev/null
 +++ b/libcxx/test/std/language.support/support.srcloc/obs/file_name.pass.cpp
 @@ -0,0 +1,39 @@
@@ -573,6 +537,7 @@ new file mode 100644
 +}
 diff --git a/libcxx/test/std/language.support/support.srcloc/obs/function_name.pass.cpp b/libcxx/test/std/language.support/support.srcloc/obs/function_name.pass.cpp
 new file mode 100644
+index 000000000000..3dfb80c23e7e
 --- /dev/null
 +++ b/libcxx/test/std/language.support/support.srcloc/obs/function_name.pass.cpp
 @@ -0,0 +1,39 @@
@@ -617,6 +582,7 @@ new file mode 100644
 +}
 diff --git a/libcxx/test/std/language.support/support.srcloc/obs/line.pass.cpp b/libcxx/test/std/language.support/support.srcloc/obs/line.pass.cpp
 new file mode 100644
+index 000000000000..9e0a9f3740d1
 --- /dev/null
 +++ b/libcxx/test/std/language.support/support.srcloc/obs/line.pass.cpp
 @@ -0,0 +1,47 @@
@@ -668,31 +634,14 @@ new file mode 100644
 +  return 0;
 +}
 diff --git a/libcxx/utils/generate_feature_test_macro_components.py b/libcxx/utils/generate_feature_test_macro_components.py
+index 00de15dae24a..985c0e68da7a 100755
 --- a/libcxx/utils/generate_feature_test_macro_components.py
 +++ b/libcxx/utils/generate_feature_test_macro_components.py
-@@ -593,6 +593,12 @@
-    },
-    "headers": ["array"],
-    },
-+  {"name": "__cpp_lib_source_location",
-+   "values": {
-+     "c++2a": int(201907),
-+   },
-+   "headers": ["source_location"],
-+   },
-   {"name": "__cpp_lib_span",
-    "values": {
-      "c++2a": int(202002),
-diff --git a/libcxx/www/cxx2a_status.html b/libcxx/www/cxx2a_status.html
---- a/libcxx/www/cxx2a_status.html
-+++ b/libcxx/www/cxx2a_status.html
-@@ -171,7 +171,7 @@
- 	<tr><td><a href="https://wg21.link/P1065">P1065</a></td><td>LWG</td><td>Constexpr INVOKE</td><td>Cologne</td><td></td><td></td></tr>
- 	<tr><td><a href="https://wg21.link/P1135">P1135</a></td><td>LWG</td><td>The C++20 Synchronization Library</td><td>Cologne</td><td>Complete</td><td></td></tr>
- 	<tr><td><a href="https://wg21.link/P1207">P1207</a></td><td>LWG</td><td>Movability of Single-pass Iterators</td><td>Cologne</td><td></td><td></td></tr>
--	<tr><td><a href="https://wg21.link/P1208">P1208</a></td><td>LWG</td><td>Adopt source_location for C++20</td><td>Cologne</td><td></td><td></td></tr>
-+	<tr><td><a href="https://wg21.link/P1208">P1208</a></td><td>LWG</td><td>Adopt source_location for C++20</td><td>Cologne</td><td>Complete</td><td>11.0</td></tr>
- 	<tr><td><a href="https://wg21.link/P1355">P1355</a></td><td>LWG</td><td>Exposing a narrow contract for ceil2</td><td>Cologne</td><td>Complete</td><td>9.0</td></tr>
- 	<tr><td><a href="https://wg21.link/P1361">P1361</a></td><td>LWG</td><td>Integration of chrono with text formatting</td><td>Cologne</td><td></td><td></td></tr>
- 	<tr><td><a href="https://wg21.link/P1423">P1423</a></td><td>LWG</td><td>char8_t backward compatibility remediation</td><td>Cologne</td><td></td><td></td></tr>
-
+@@ -531,7 +531,6 @@ feature_test_macros = [ add_version_header(x) for x in [
+     "name": "__cpp_lib_source_location",
+     "values": { "c++20": 201907 },
+     "headers": ["source_location"],
+-    "unimplemented": True,
+   }, {
+     "name": "__cpp_lib_span",
+     "values": { "c++20": 202002 },

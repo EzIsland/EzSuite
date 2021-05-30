@@ -138,8 +138,7 @@ class Vector {
 };
 
 template <tfl::Value T> [[nodiscard]] constexpr Vector<T>::Vector() noexcept
-: mDa
-eta(nullptr), mCapacity(0), mSize(0) { }
+: mData(nullptr), mCapacity(0), mSize(0) { }
 
 template <tfl::Value T>
 template <tfl::ForwardRefOf<T>... Args>

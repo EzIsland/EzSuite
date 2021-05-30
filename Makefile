@@ -21,6 +21,19 @@
 # Specifies that this module's implementation file directly imports ezs.adt.Vector and ezs.adt.Stack
 #    ezs.test.Module_IMPLEMENTATION_DEPS := ezs.adt.Vector ezs.adt.Stack
 
+define NEWLINE =
+
+
+
+endef
+
+define TAB =
+    
+
+endef
+
+NEWLINE_TAB :=${NEWLINE}${TAB}
+
 # Retrieve the directory part of a path without the trailing slash.
 # /home/user/dir/file.txt -> /home/user/dir
 getDir =$(foreach path,$(1),$(patsubst %/,%,$(dir $(path))))
@@ -308,12 +321,11 @@ OBJ_EXT := o
 # Platform specific commands for adding/removing directories
 MAKE_DIR := mkdir -p
 RM_DIR := rm -r
-cat = printf '$(1)' > $(2)
-
 
 
 # CXX FLAGS
-LLVM-PROJECT_ROOT:=/home/ezra/Documents/llvm-project/build/master/release
+#LLVM-PROJECT_ROOT:=/home/ezra/Documents/llvm-project/build/master/release
+LLVM-PROJECT_ROOT:=/llvm-project/release
 MSAN-LIBCXX_ROOT:=/home/ezra/Documents/llvm-project/build/master/msan-libcxx
 
 CXX :=$(LLVM-PROJECT_ROOT)/bin/clang++
@@ -408,7 +420,7 @@ lastword=$(word $(words text),$(1))
 head=$(filter-out $(call lastword,$(1)),$(1))
 
 # Assembles the inputs into a quotated, comman-separated list.
-assembleArguments= \n\t$(foreach arg,$(call head,$(1)),"$(arg)",\n\t) "$(lastword $(1))"\n\t
+assembleArguments= ${NEWLINE_TAB}$(foreach arg,$(call head,$(1)),"$(arg)",${NEWLINE_TAB}) "$(lastword $(1))"${NEWLINE_TAB}
 
 # Retrieves arguments for building a module interface
 getInterfaceArgs=$(CXX) $(CXX_FLAGS) $(call getModuleInterfaceDepsNamedBmiFlags,$(1)) $(call getModuleInterfaceDepsIncludeFlags,$(1)) -x c++-module --precompile $(call getModuleInterfaceFile,$(1)) 
@@ -422,14 +434,14 @@ assembleImplementationArgs=$(call assembleArguments,$(call getImplementationArgs
 
 
 getInterfaceCompileCommand=$(foreach file,$(call getModuleInterfaceFile,$(1)),\
-			{\n\t"arguments":[$(call assembleInterfaceArgs,$(1))],\
-			\n\t"directory":"$(ROOT_DIR)",\
-			\n\t"file":"$(patsubst $(ROOT_DIR)/%,%,$(file))"\n},)
+			{${NEWLINE_TAB}"arguments":[$(call assembleInterfaceArgs,$(1))],\
+			${NEWLINE_TAB}"directory":"$(ROOT_DIR)",\
+			${NEWLINE_TAB}"file":"$(patsubst $(ROOT_DIR)/%,%,$(file))"${NEWLINE}},)
 
 getImplementationCompileCommand=$(foreach file,$(call getModuleImplementationFile,$(1)),\
-			{\n\t"arguments":[$(call assembleImplementationArgs,$(1))],\
-			\n\t"directory":"$(ROOT_DIR)",\
-			\n\t"file":"$(patsubst $(ROOT_DIR)/%,%,$(file))"\n},)
+			{${NEWLINE_TAB}"arguments":[$(call assembleImplementationArgs,$(1))],\
+			${NEWLINE_TAB}"directory":"$(ROOT_DIR)",\
+			${NEWLINE_TAB}"file":"$(patsubst $(ROOT_DIR)/%,%,$(file))"${NEWLINE}},)
 
 getModuleCompileCommand=$(call getInterfaceCompileCommand,$(1))\
 			$(call getImplementationCompileCommand,$(1))
@@ -521,8 +533,7 @@ $(MODULES) : $$(call getModuleObjFile,$$@)
 $(MODULES) : $$(call getModuleHeaderFile,$$@)
 
 compile-commands:
-	$(info Making Compile Commands)
-	@$(call cat,$(COMPILE_COMMANDS),compile_commands.json)
+	$(file > compile_commands.json, ${COMPILE_COMMANDS})
 
 dep-graph:
 	@make -Bnd | grep -Ev *.mk | make2graph -b | dot -Tpng -o dep-graph.png
