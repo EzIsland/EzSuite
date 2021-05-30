@@ -1,0 +1,13 @@
+[user]
+	email = ez@ezisland.org
+	name = Ezra Stein
+
+[merge]
+  tool = external_merge_tool
+
+[mergetool "external_merge_tool"]
+  cmd = external_merge_tool "$BASE" "$LOCAL" "$REMOTE" "$MERGED"
+  trustExitCode = false
+
+[diff]
+  external = external_diff_tool

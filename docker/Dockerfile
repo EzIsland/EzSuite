@@ -4,10 +4,10 @@ RUN DEBIAN_FRONTEND=noninteractive apt update && apt upgrade -y
 
 FROM debian-updated AS download-llvm-project
 RUN DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends --fix-missing git ca-certificates
-COPY source_location.patch source_location.patch
 WORKDIR /llvm-project
 RUN git clone --progress --depth 1 --single-branch --branch release/12.x https://github.com/llvm/llvm-project.git .
-RUN git apply /source_location.patch
+COPY source_location_patch.diff source_location_patch.diff
+RUN git apply --whitespace=fix source_location_patch.diff
 
 FROM debian-updated AS build-llvm-project-core-deps
 RUN DEBIAN_FRONTEND=noninteractive apt install -y  --no-install-recommends --fix-missing cmake ninja-build python3
@@ -95,17 +95,32 @@ RUN cmake \
 -G Ninja ../llvm
 RUN cmake --build . --target install-cxx install-cxxabi install-pstl
 
+FROM debian:unstable as p4v-install
+WORKDIR /p4v-build
+RUN wget https://www.perforce.com/downloads/perforce/r21.1/bin.linux26x86_64/p4v.tgz
+RUN tar xvzf p4v.tgz /p4v
+
 FROM debian-updated
 COPY --from=build-llvm-project-msan-libcxx /llvm-project/install-msan-libcxx /llvm-project/msan-libcxx
 COPY --from=build-llvm-project-debug-libcxx /llvm-project/install-debug-libcxx /llvm-project/debug-libcxx
 COPY --from=build-llvm-project-release /llvm-project/install-release /llvm-project/release
 
+COPY --from=p4v-install /p4v /p4v
+RUN ln -s /p4v/bin/p4merge /usr/bin/p4merge
+
+WORKDIR /usr/local/bin
+COPY external_merge_tool external_merge_tool
+RUN chmod a+x external_merge_tool
+COPY external_diff_tool external_diff_tool
+RUN chmod a+x external_diff_tool
+
+WORKDIR /
 RUN echo 'APT::Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries
 RUN apt update && \
     DEBIAN_FRONTEND=noninteractive apt upgrade -y && \
     DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends --fix-missing \
     xfce4 tigervnc-standalone-server less procps nano sudo openssl openssh-server supervisor man dbus-x11 emacs chromium xfce4-terminal \
-    htop chromium make ca-certificates git libc6-dev
+    htop chromium make ca-certificates git libc6-dev libboost-dev
 RUN useradd --create-home --shell /bin/bash --groups sudo -p `openssl passwd -1 default` dev
 COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN mkdir /var/run/sshd
@@ -116,6 +131,8 @@ COPY --chown=dev:dev ./vncpasswd .vnc/passwd
 RUN chmod 600 .vnc/passwd
 COPY --chown=dev:dev ./xstartup .vnc/xstartup
 RUN chmod 744 .vnc/xstartup
+
+COPY --chown=dev:dev docker_gitconfig .gitconfig
 
 COPY --chown=dev:dev ./init.el .emacs.d/init.el
 

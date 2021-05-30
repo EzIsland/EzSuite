@@ -1,0 +1,2 @@
+#!/bin/sh
+external_merge_tool "$2" "$5"

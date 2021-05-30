@@ -14,7 +14,7 @@ echo "BUILDING IMAGE"
 docker build -t dev . > /dev/null
 
 echo "STARTING CONTAINER"
-docker run -p 10022:22 dev > /dev/null &
+docker run -p 10022:22 --mount type=bind,source="$(pwd)"/../,dst=/home/dev/EzS dev > /dev/null &
 
 CONTAINER_PID=$!
 
