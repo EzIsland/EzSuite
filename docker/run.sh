@@ -1,7 +1,29 @@
 #!/bin/bash
 
-docker build -t dev .
-docker run -p 10022:22 dev &
-sleep 5
-ssh -L 5901:127.0.0.1:5901 dev@localhost -p 10022 -N
+sigint_handler () {
+    echo "KILLING SSH"
+    kill -s SIGINT $SSH_PID
 
+    echo "KILLING CONTAINER"
+    kill -s SIGINT $CONTAINER_PID
+}
+
+trap sigint_handler SIGINT
+
+echo "BUILDING IMAGE"
+docker build -t dev . > /dev/null
+
+echo "STARTING CONTAINER"
+docker run -p 10022:22 dev > /dev/null &
+
+CONTAINER_PID=$!
+
+sleep 5
+
+echo "STARTING SSH TUNNEL"
+ssh-keygen -f "/home/ezra/.ssh/known_hosts" -R "[localhost]:10022"
+sshpass -p "default" ssh -L 5901:127.0.0.1:5901 dev@localhost -p 10022 -o "StrictHostKeyChecking no" -N &
+SSH_PID=$!
+
+wait $SSH_PID
+wait $CONTAINER_PID
